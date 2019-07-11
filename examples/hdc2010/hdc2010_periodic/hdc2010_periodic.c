@@ -60,7 +60,7 @@ int main(void)
 
     while(1)
     {
-        status = HDC2010_getMeasurement(i2cHandle, &hdcMeasureConfig, &curMeasure);
+        status = HDC2010_getManualMeasurement(i2cHandle, &hdcMeasureConfig, &curMeasure);
 
         if(status == SENSOR_BLAST_OK)
         {

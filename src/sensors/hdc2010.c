@@ -7,11 +7,12 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <time.h>
 #include "sb_codes.h"
 #include "sb_i2c_inf.h"
 #include "hdc2010.h"
 
-int32_t HDC2010_getMeasurement(int i2cHandle,
+int32_t HDC2010_getManualMeasurement(int i2cHandle,
                                HDC2010_MeasurementConfig* measureConfig,
                                HDC2010_Measurement* measurement)
 {
@@ -19,6 +20,7 @@ int32_t HDC2010_getMeasurement(int i2cHandle,
     uint8_t writePayload[2];
     uint8_t readReg;
     uint16_t rawValue;
+    struct timespec sleepDelay;
 
     /* Writing the configuration */
     writePayload[0] = HDC2010_MEASURE_CONFIG_REG;
@@ -33,6 +35,54 @@ int32_t HDC2010_getMeasurement(int i2cHandle,
     {
         return SENSOR_BLAST_I2C_ERROR;
     }
+
+    /* Delaying */
+    sleepDelay.tv_sec = 0;
+    if(measureConfig->object.mode == HDC2010_HumidityAndTemperature)
+    {
+        if(measureConfig->object.humidResolution == HDC2010_Humid_14bit)
+        {
+            sleepDelay.tv_nsec = HDC2010_14BIT_HUMID_TIME;
+        }
+        else if(measureConfig->object.humidResolution == HDC2010_Humid_11bit)
+        {
+            sleepDelay.tv_nsec = HDC2010_11BIT_HUMID_TIME;
+        }
+        else if(measureConfig->object.humidResolution == HDC2010_Humid_9bit)
+        {
+            sleepDelay.tv_nsec = HDC2010_9BIT_HUMID_TIME;
+        }
+        else
+        {
+            return (SENSOR_BLAST_PARAM_ERROR);
+        }
+
+    }
+    else if(measureConfig->object.mode == HDC2010_TemperatureOnly)
+    {
+        if(measureConfig->object.tempResolution == HDC2010_Temp_14bit)
+        {
+            sleepDelay.tv_nsec = HDC2010_14BIT_TEMP_TIME;
+        }
+        else if(measureConfig->object.tempResolution == HDC2010_Temp_11bit)
+        {
+            sleepDelay.tv_nsec = HDC2010_11BIT_TEMP_TIME;
+        }
+        else if(measureConfig->object.tempResolution == HDC2010_Temp_9bit)
+        {
+            sleepDelay.tv_nsec = HDC2010_9BIT_TEMP_TIME;
+        }
+        else
+        {
+            return (SENSOR_BLAST_PARAM_ERROR);
+        }
+    }
+    else
+    {
+        return (SENSOR_BLAST_PARAM_ERROR);
+    }
+
+    nanosleep(&sleepDelay, NULL);
 
     /* Reading the result */
     sensorTrans.writeBytes = 1;

@@ -85,6 +85,7 @@ typedef union _HDC2010_MeasurementConfig
 
 typedef struct _HDC2010_Measurement
 {
+    /* Where the results are stored */
     float temperature;
     float humidity;
 } HDC2010_Measurement;
@@ -106,8 +107,16 @@ typedef int HDC2010_Handle;
 #define HDC2010_MEASURE_CONFIG_REG 0x0F
 #define HDC2010_CONFIG_REG 0x0E
 
+/* Datasheet Definitions */
+#define HDC2010_14BIT_HUMID_TIME 660000
+#define HDC2010_11BIT_HUMID_TIME 400000
+#define HDC2010_9BIT_HUMID_TIME 275000
+#define HDC2010_14BIT_TEMP_TIME 610000
+#define HDC2010_11BIT_TEMP_TIME 350000
+#define HDC2010_9BIT_TEMP_TIME 225000
+
 /* Function Definitions */
-extern int32_t HDC2010_getMeasurement(int i2chandle,
+extern int32_t HDC2010_getManualMeasurement(int i2chandle,
                                       HDC2010_MeasurementConfig* measureConfig,
                                       HDC2010_Measurement* measurement);
 extern int32_t HDC2010_openDriver(int i2cHandle, HDC2010_Config* config);
