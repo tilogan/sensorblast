@@ -7,36 +7,30 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <time.h>
 #include "sb_codes.h"
+#include "sb_logger.h"
 #include "sb_i2c_inf.h"
 #include "hdc2010.h"
 
-int32_t HDC2010_getManualMeasurement(int i2cHandle,
+/* Statics */
+static void *HDC2010_pollThread(void *arg);
+
+int32_t HDC2010_getManualMeasurement(HDC2010_Interface* infHandle,
                                HDC2010_MeasurementConfig* measureConfig,
                                HDC2010_Measurement* measurement)
 {
-    SensorBlast_I2CTrans sensorTrans;
-    uint8_t writePayload[2];
-    uint8_t readReg;
-    uint16_t rawValue;
     struct timespec sleepDelay;
+    int32_t ret;
 
-    /* Writing the configuration */
-    writePayload[0] = HDC2010_MEASURE_CONFIG_REG;
-    writePayload[1] = measureConfig->byte;
-    sensorTrans.slaveAddress = HDC2010_SLAVE_ADDRESS;
-    sensorTrans.writeBytes = 2;
-    sensorTrans.readBytes = 0;
-    sensorTrans.writeBuffer = writePayload;
-    sensorTrans.i2cHandle = i2cHandle;
+    ret = HDC2010_initiateMeasurement(infHandle, measureConfig);
 
-    if(SensorBlast_I2CTransfer(&sensorTrans) != SENSOR_BLAST_OK)
+    if(ret != SENSOR_BLAST_OK)
     {
-        return SENSOR_BLAST_I2C_ERROR;
+        return ret;
     }
 
-    /* Delaying */
     sleepDelay.tv_sec = 0;
     if(measureConfig->object.mode == HDC2010_HumidityAndTemperature)
     {
@@ -84,16 +78,48 @@ int32_t HDC2010_getManualMeasurement(int i2cHandle,
 
     nanosleep(&sleepDelay, NULL);
 
+    return HDC2010_getMeasurement(infHandle, measurement);
+}
+
+int32_t HDC2010_initiateMeasurement(HDC2010_Interface* infHandle,
+                                    HDC2010_MeasurementConfig* measureConfig)
+{
+    SensorBlast_I2CTrans sensorTrans;
+    uint8_t writePayload[2];
+
+    /* Writing the configuration */
+    writePayload[0] = HDC2010_MEASURE_CONFIG_REG;
+    writePayload[1] = measureConfig->byte;
+    sensorTrans.slaveAddress = HDC2010_SLAVE_ADDRESS;
+    sensorTrans.writeBytes = 2;
+    sensorTrans.readBytes = 0;
+    sensorTrans.writeBuffer = writePayload;
+    sensorTrans.i2cHandle = infHandle->i2cHandle;
+
+    return SensorBlast_I2CTransfer(&sensorTrans);
+}
+
+int32_t HDC2010_getMeasurement(HDC2010_Interface* infHandle,
+                               HDC2010_Measurement* measurement)
+{
+    uint16_t rawValue;
+    SensorBlast_I2CTrans sensorTrans;
+    uint8_t writePayload[2];
+    uint8_t readReg;
+
     /* Reading the result */
+    sensorTrans.slaveAddress = HDC2010_SLAVE_ADDRESS;
     sensorTrans.writeBytes = 1;
+    sensorTrans.writeBuffer = writePayload;
     sensorTrans.readBytes = 1;
     sensorTrans.readBuffer = &readReg;
+    sensorTrans.i2cHandle = infHandle->i2cHandle;
     writePayload[0] = HDC2010_TEMP_RES0_REG;
 
     /* Temperature LSB */
     if(SensorBlast_I2CTransfer(&sensorTrans) != SENSOR_BLAST_OK)
     {
-        return SENSOR_BLAST_I2C_ERROR;
+        return (SENSOR_BLAST_I2C_ERROR);
     }
 
     rawValue = readReg;
@@ -102,7 +128,7 @@ int32_t HDC2010_getManualMeasurement(int i2cHandle,
     /* Temperature MSB */
     if(SensorBlast_I2CTransfer(&sensorTrans) != SENSOR_BLAST_OK)
     {
-        return SENSOR_BLAST_I2C_ERROR;
+        return (SENSOR_BLAST_I2C_ERROR);
     }
 
     rawValue |= (readReg << 8);
@@ -117,7 +143,7 @@ int32_t HDC2010_getManualMeasurement(int i2cHandle,
     /* Humidity LSB */
     if(SensorBlast_I2CTransfer(&sensorTrans) != SENSOR_BLAST_OK)
     {
-        return SENSOR_BLAST_I2C_ERROR;
+        return (SENSOR_BLAST_I2C_ERROR);
     }
 
     rawValue = readReg;
@@ -126,7 +152,7 @@ int32_t HDC2010_getManualMeasurement(int i2cHandle,
     /* Humidity MSB */
     if(SensorBlast_I2CTransfer(&sensorTrans) != SENSOR_BLAST_OK)
     {
-        return SENSOR_BLAST_I2C_ERROR;
+        return (SENSOR_BLAST_I2C_ERROR);
     }
 
     rawValue |= (readReg << 8);
@@ -134,10 +160,11 @@ int32_t HDC2010_getManualMeasurement(int i2cHandle,
     /* Calculating the result */
     measurement->humidity = ((rawValue / 65536.0f) * 100.0f);
 
-    return SENSOR_BLAST_OK;
+    return (SENSOR_BLAST_OK);
 }
 
-int32_t HDC2010_openDriver(int i2cHandle, HDC2010_Config* config)
+int32_t HDC2010_openDriver(HDC2010_Interface* infHandle,
+                            HDC2010_Config* config)
 {
     SensorBlast_I2CTrans configTrans;
     uint8_t transPayload[1];
@@ -149,8 +176,78 @@ int32_t HDC2010_openDriver(int i2cHandle, HDC2010_Config* config)
     configTrans.writeBytes = 2;
     configTrans.readBytes = 0;
     configTrans.writeBuffer = transPayload;
-    configTrans.i2cHandle = i2cHandle;
+    configTrans.i2cHandle = infHandle->i2cHandle;
 
     return SensorBlast_I2CTransfer(&configTrans);
+}
+
+int32_t HDC2010_startPolling(HDC2010_Interface* infHandle)
+{
+    int ret;
+    char threadName[9];
+
+    /* Creating the thread  to start polling the GPIO */
+    snprintf(threadName, 9, "THREAD%d", infHandle->gpioHandle);
+    ret = pthread_create(&infHandle->pollThread, NULL, HDC2010_pollThread,
+                            (void*)infHandle);
+}
+
+int32_t HDC2010_stopPolling(HDC2010_Interface* infHandle)
+{
+    infHandle->stopInitiated == true;
+    pthread_join(infHandle->pollThread, NULL);
+}
+
+static void *HDC2010_pollThread(void *arg)
+{
+    HDC2010_Interface* infHandle = (HDC2010_Interface*)arg;
+    HDC2010_Measurement measurement;
+
+    if(arg == NULL)
+    {
+        return (NULL);
+    }
+
+
+    while(1)
+    {
+        SensorBlast_pollGPIO(infHandle->gpioHandle, 1000);
+
+        if(infHandle->stopInitiated == true)
+        {
+            break;
+        }
+
+        /* Invoking the user callback */
+        infHandle->cb(SENSOR_BLAST_OK);
+    }
+
+}
+
+int32_t HDC2010_setInterruptConfig(HDC2010_Interface* infHandle,
+                                   HDC2010_InterruptConfig* intConfig)
+{
+    SensorBlast_I2CTrans configTrans;
+    uint8_t transPayload[1];
+
+    /* Writing the configuration */
+    transPayload[0] = HDC2010_INTERRUPT_CONFIG_REG;
+    transPayload[1] = intConfig->byte;
+    configTrans.slaveAddress = HDC2010_SLAVE_ADDRESS;
+    configTrans.writeBytes = 2;
+    configTrans.readBytes = 0;
+    configTrans.writeBuffer = transPayload;
+    configTrans.i2cHandle = infHandle->i2cHandle;
+
+    return SensorBlast_I2CTransfer(&configTrans);
+}
+
+int32_t HDC2010_initInterfaceObject(HDC2010_Interface* infHandle)
+{
+    infHandle->cb = NULL;
+    infHandle->i2cHandle = 0;
+    infHandle->gpioHandle = 0;
+    infHandle->pollThread = (pthread_t)NULL;
+    infHandle->stopInitiated = false;
 }
 

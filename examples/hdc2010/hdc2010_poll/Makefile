@@ -1,9 +1,9 @@
 ROOT_DIR := ../../../
 
-all: hdc2010_periodic
+all: hdc2010_poll
 
-SOURCES := hdc2010_periodic.c
-OBJECTS := hdc2010_periodic.o
+SOURCES := hdc2010_poll.c
+OBJECTS := hdc2010_poll.o
 
 CC := gcc
 
@@ -13,9 +13,9 @@ LDFLAGS := -L$(ROOT_DIR)src/sensors/ -lsensorblast -lpthread
 %.o : %.c
 	$(CC) $(CFLAGS) $^ -o $@
 
-hdc2010_periodic: $(OBJECTS)
+hdc2010_poll: $(OBJECTS)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -rf *.o
-	rm -rf hdc2010_periodic
+	rm -rf hdc2010_poll

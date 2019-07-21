@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #define HDC2010_SLAVE_ADDRESS 0x40
 
@@ -70,7 +71,7 @@ typedef union _HDC2010_Config
 
 typedef struct _HDC2010_MeasurementConfigStruct
 {
-    bool startTrigger :1;
+    bool startTrigger : 1;
     HDC2010_Mode mode : 2;
     uint8_t reserved : 1;
     HDC2010_HumidRes humidResolution : 2;
@@ -83,6 +84,22 @@ typedef union _HDC2010_MeasurementConfig
     HDC2010_MeasurementConfigStruct object;
 } HDC2010_MeasurementConfig;
 
+typedef struct _HDC2010_InterruptConfigStruct
+{
+    bool humidityLowEnable :1;
+    bool humidityHighEnable :1;
+    bool temperatureLowEnable :1;
+    bool temperatureHighEnable :1;
+    bool dataReadyEnable :1;
+    uint8_t reserverd :3;
+} HDC2010_InterruptConfigStruct;
+
+typedef union _HDC2010_InterruptConfig
+{
+    uint8_t byte;
+    HDC2010_InterruptConfigStruct object;
+} HDC2010_InterruptConfig;
+
 typedef struct _HDC2010_Measurement
 {
     /* Where the results are stored */
@@ -90,20 +107,31 @@ typedef struct _HDC2010_Measurement
     float humidity;
 } HDC2010_Measurement;
 
+typedef void (*HDC2010_Callback)(int32_t);
+
 typedef struct _HDC2010_DriverConfig
 {
     HDC2010_MeasurementConfig* measureConfig;
     HDC2010_Config* config;
-    int i2cHandle;
 } HDC2010_DriverConfig;
+
+typedef struct _HDC2010_Interface
+{
+    int i2cHandle;
+    int gpioHandle;
+    bool stopInitiated;
+    pthread_t pollThread;
+    HDC2010_Callback cb;
+} HDC2010_Interface;
 
 typedef int HDC2010_Handle;
 
 /* Register Definitions */
 #define HDC2010_TEMP_RES0_REG 0x00
 #define HDC2010_TEMP_RES1_REG 0x01
-#define HDC2010_HUMID_RES0_REG 0x03
-#define HDC2010_HUMID_RES1_REG 0x04
+#define HDC2010_HUMID_RES0_REG 0x02
+#define HDC2010_HUMID_RES1_REG 0x03
+#define HDC2010_INTERRUPT_CONFIG_REG 0x07
 #define HDC2010_MEASURE_CONFIG_REG 0x0F
 #define HDC2010_CONFIG_REG 0x0E
 
@@ -116,9 +144,18 @@ typedef int HDC2010_Handle;
 #define HDC2010_9BIT_TEMP_TIME 225000
 
 /* Function Definitions */
-extern int32_t HDC2010_getManualMeasurement(int i2chandle,
+extern int32_t HDC2010_getManualMeasurement(HDC2010_Interface* infHandle,
                                       HDC2010_MeasurementConfig* measureConfig,
                                       HDC2010_Measurement* measurement);
-extern int32_t HDC2010_openDriver(int i2cHandle, HDC2010_Config* config);
-
+extern int32_t HDC2010_getMeasurement(HDC2010_Interface* infHandle, 
+                                      HDC2010_Measurement* measurement);
+extern int32_t HDC2010_initInterfaceObject(HDC2010_Interface* infHandle);
+extern int32_t HDC2010_initiateMeasurement(HDC2010_Interface* infHandle,
+                                           HDC2010_MeasurementConfig* measureConfig);
+extern int32_t HDC2010_openDriver(HDC2010_Interface* infHandle,
+                                  HDC2010_Config* config);
+extern int32_t HDC2010_setInterruptConfig(HDC2010_Interface* infHandle,
+                                          HDC2010_InterruptConfig* intConfig);
+extern int32_t HDC2010_startPolling(HDC2010_Interface* infHandle);
+extern int32_t HDC2010_stopPolling(HDC2010_Interface* infHandle);
 #endif

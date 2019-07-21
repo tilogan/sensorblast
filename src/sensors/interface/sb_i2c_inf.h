@@ -24,5 +24,7 @@ typedef struct _SensorBlast_I2CTrans
 
 /* Function Declarations */
 extern int32_t SensorBlast_I2CTransfer(SensorBlast_I2CTrans* trans);
+extern int32_t SensorBlast_pollGPIO(int gpioHandle, int timeout);
+extern int SensorBlast_configureGPIOInput(char* path, int gpioPin);
 
 #endif

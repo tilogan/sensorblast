@@ -7,10 +7,12 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <stdio.h>
-#include "hdc2010.h"
+#include <syslog.h>
 #include <fcntl.h>
-#include "sb_codes.h"
 #include <linux/i2c.h>
+#include <poll.h>
+#include "sb_codes.h"
+#include "hdc2010.h"
 
 #define I2C_PATH "/dev/i2c-1"
 
@@ -21,7 +23,7 @@ HDC2010_Config hdcConfig =
     {
         .softReset = false,
         .autoMode = HDC2010_Auto_Disabled,
-        .useHeater = true,
+        .useHeater = false,
         .enableInt = false,
         .activeHigh = false,
         .intMode = HDC2010_LevelSensitive
@@ -39,38 +41,58 @@ HDC2010_MeasurementConfig hdcMeasureConfig =
     }
 };
 
+
+HDC2010_InterruptConfig hdcInterruptConfig =
+{
+    .object =
+    {
+        .humidityLowEnable = false,
+        .humidityHighEnable = false,
+        .temperatureLowEnable = false,
+        .temperatureHighEnable = false,
+        .dataReadyEnable = false,
+    }
+};
+
 int main(void)
 {
     HDC2010_Measurement curMeasure;
     int32_t status;
     uint32_t count = 0;
-    int i2cHandle;
+    HDC2010_Interface hdcInf;
+    int fd;
+    int len;
+    char writeBuf[64];
 
-    printf("\n---Sensor Blast - HDC2010 Proof of Concept---");
+    printf("\n---Sensor Blast - HDC2010 Proof of Concept---\n");
 
     /* Open the I2C Bus */
-    if ((i2cHandle = open(I2C_PATH, O_RDWR)) < 0)
+    if ((hdcInf.i2cHandle = open(I2C_PATH, O_RDWR)) < 0)
     {
         printf("\nERROR: Could not open I2C driver. Try running as root?\n");
         return -1;
     }
 
     /* Opening the driver */
-    HDC2010_openDriver(i2cHandle, &hdcConfig);
+    HDC2010_openDriver(&hdcInf, &hdcConfig);
+
+    /* Setting the interrupt config */
+    HDC2010_setInterruptConfig(&hdcInf, &hdcInterruptConfig);
 
     while(1)
     {
-        status = HDC2010_getManualMeasurement(i2cHandle, &hdcMeasureConfig, &curMeasure);
+        status = HDC2010_getManualMeasurement(&hdcInf, &hdcMeasureConfig,
+                                               &curMeasure);
 
         if(status == SENSOR_BLAST_OK)
         {
-            printf("\n--- Sensor Reading %d ---", count);
-            printf("\nTemperature Reading %f", curMeasure.temperature);
-            printf("\nHumidity Reading %f", curMeasure.humidity);
+            printf("--- Sensor Reading %d ---\n", count);
+            printf("Temperature Reading %f\n", curMeasure.temperature);
+            printf("Humidity Reading %f\n", curMeasure.humidity);
         }
         else
         {
-            printf("\nERROR: Could not read HDC2010! (err 0x%x)\n", status);
+            printf("ERROR: Could not read HDC2010! (err 0x%x)\n", status);
             return status;
         }
 
