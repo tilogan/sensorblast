@@ -41,7 +41,6 @@ HDC2010_MeasurementConfig hdcMeasureConfig =
     }
 };
 
-
 HDC2010_InterruptConfig hdcInterruptConfig =
 {
     .object =
@@ -60,17 +59,14 @@ int main(void)
     int32_t status;
     uint32_t count = 0;
     HDC2010_Interface hdcInf;
-    int fd;
-    int len;
-    char writeBuf[64];
 
-    printf("\n---Sensor Blast - HDC2010 Proof of Concept---\n");
+    printf("\n---Sensor Blast - HDC2010 Periodic---\n");
 
     /* Open the I2C Bus */
     if ((hdcInf.i2cHandle = open(I2C_PATH, O_RDWR)) < 0)
     {
         printf("\nERROR: Could not open I2C driver. Try running as root?\n");
-        return -1;
+        return (-1);
     }
 
     /* Opening the driver */
@@ -98,6 +94,7 @@ int main(void)
 
         count++;
 
+        /* Delaying between measurements */
         sleep(1);
     }
 }
