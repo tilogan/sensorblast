@@ -137,5 +137,3 @@ void hdc2010_callback_function(int32_t status)
         printf("ERROR: Could not read HDC2010! (err 0x%x)\n", status);
     }
 }
-
-

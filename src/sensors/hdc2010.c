@@ -4,7 +4,6 @@
  * This software may be modified and distributed under the terms
  * of the MIT license.  See the LICENSE file for details.
  */
-
 #include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -31,6 +30,7 @@ int32_t HDC2010_getManualMeasurement(HDC2010_Interface* infHandle,
         return ret;
     }
 
+    /* Delaying for the time specified in the specification */
     sleepDelay.tv_sec = 0;
     if(measureConfig->object.mode == HDC2010_HumidityAndTemperature)
     {
@@ -208,7 +208,6 @@ static void *HDC2010_pollThread(void *arg)
         return (NULL);
     }
 
-
     while(1)
     {
         SensorBlast_pollGPIO(infHandle->gpioHandle, 1000);
@@ -250,4 +249,3 @@ int32_t HDC2010_initInterfaceObject(HDC2010_Interface* infHandle)
     infHandle->pollThread = (pthread_t)NULL;
     infHandle->stopInitiated = false;
 }
-

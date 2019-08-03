@@ -31,7 +31,6 @@
 #define JSON_TEMPLATE "{\"temperature\":%f, \"humidity\":%f }"
 #define PAYLOAD_MAX 100
 
-
 /* Configuration Structures */
 extern HDC2010_Config hdcConfig;
 extern HDC2010_MeasurementConfig hdcMeasureConfig;
@@ -85,6 +84,7 @@ int main(void)
     IoT_Publish_Message_Params paramsQOS0;
     IoT_Error_t rc = FAILURE;
 
+    /* Parsing all of the certificate files */
     getcwd(CurrentWD, sizeof(CurrentWD));
     snprintf(rootCA, PATH_MAX + 1, "%s/%s/%s", CurrentWD, CERTS_DIR,
              AWS_IOT_ROOT_CA_FILENAME);
@@ -94,9 +94,6 @@ int main(void)
             AWS_IOT_PRIVATE_KEY_FILENAME);
 
     printf("\n---Sensor Blast - AWS MQTT Publish---\n");
-
-    /* Parsing all of the certificate files */
-
 
     /* Initializing the MQTT parameters */
     mqttInitParams.enableAutoReconnect = true;

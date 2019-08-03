@@ -26,7 +26,7 @@
 #define AWS_IOT_MQTT_HOST              "a1v3x9hi58jomh-ats.iot.us-east-2.amazonaws.com" ///< Customer specific MQTT HOST. The same will be used for Thing Shadow
 #define AWS_IOT_MQTT_PORT              443 ///< default port for MQTT/S
 #define AWS_IOT_MQTT_CLIENT_ID         "c-sdk-client-id" ///< MQTT client ID should be unique for every device
-#define AWS_IOT_MY_THING_NAME 		   "MyRPI" ///< Thing Name of the Shadow this device is associated with
+#define AWS_IOT_MY_THING_NAME          "MyRPI" ///< Thing Name of the Shadow this device is associated with
 #define AWS_IOT_ROOT_CA_FILENAME       "AmazonRootCA1.pem" ///< Root CA file name
 #define AWS_IOT_CERTIFICATE_FILENAME   "1ab011dd7a-certificate.pem.crt" ///< device signed certificate file name
 #define AWS_IOT_PRIVATE_KEY_FILENAME   "1ab011dd7a-private.pem.key" ///< Device private key filename

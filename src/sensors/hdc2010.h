@@ -12,8 +12,10 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+/* This is assuming that the slave select line is tied low */
 #define HDC2010_SLAVE_ADDRESS 0x40
 
+/* Enumeration definitions. These all map one for one with the datasheet. */
 typedef enum
 {
     HDC2010_Temp_14bit = 0x00,
@@ -53,7 +55,11 @@ typedef enum
     HDC2010_ComparatorMode = 0x01
 } HDC2010_InterruptMode;
 
-typedef struct _HDC_ConfigStruct
+/* All of the following definitions are mapped one-for-one to a register in the datasheet. We set
+    them up as bitfields so that we can choose either to configure each value individually (if we
+    are doing it in the code), or just write the OR'd together value if we are doing a register
+    write. We use a C union to give the flexibility here. */
+    typedef struct _HDC_ConfigStruct
 {
     HDC2010_InterruptMode intMode : 1;
     bool activeHigh : 1;
