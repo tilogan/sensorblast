@@ -26,9 +26,10 @@
 
 /* Parameters for code example */
 #define I2C_PATH "/dev/i2c-1"
+#define DEVICE_ID "my_hdc2010_device"
 #define CERTS_DIR "../../../../aws-iot-device-sdk-embedded-C/certs/"
 #define PUBLISH_TOPC "hdc2010/data"
-#define JSON_TEMPLATE "{\"temperature\":%f, \"humidity\":%f }"
+#define JSON_TEMPLATE "{\"devid\": \"%s\", \"epoch\": %lu, \"temperature\":%f, \"humidity\":%f }"
 #define PAYLOAD_MAX 100
 
 /* Configuration Structures */
@@ -165,6 +166,7 @@ int main(void)
 
             /* Throwing the results into a formatting JSON string */
             snprintf(payload, PAYLOAD_MAX, JSON_TEMPLATE,
+                     DEVICE_ID, (unsigned long)time(NULL),
                      curMeasure.temperature, curMeasure.humidity);
 
             /* Calculating the payload length */
